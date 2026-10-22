@@ -132,6 +132,60 @@ public sealed class MapInfoTests
     }
 
     [Test]
+    public void VoraxRowShowsTheElitesLeftWithTheEliteOrb()
+    {
+        var rows = Main.Rows(Rainforest, new SectionsTab(), voraxLeft: 3);
+        var row = rows.Single(r => r.Content.Name == "Vorax Elites");
+        Check.Equal(RowKind.Content, row.Kind);
+        Check.Equal("Vorax Elites  3 left", row.Text);
+        Check.Equal("game:UI_MiniMap_S13jingyingguai", row.Content.Icon);
+        Check.Equal(ContentState.Active, row.Content.State);
+    }
+
+    [Test]
+    public void VoraxRowIsDoneAtZero()
+    {
+        var row = Main.Rows(Rainforest, new SectionsTab(), voraxLeft: 0).Single(r => r.Content.Name == "Vorax Elites");
+        Check.Equal("Vorax Elites  cleared", row.Text);
+        Check.Equal(ContentState.Done, row.Content.State);
+    }
+
+    [Test]
+    public void NoVoraxRowWithoutTheBuffOrWithTheSectionOff()
+    {
+        Check.That(Main.Rows(Rainforest, new SectionsTab()).All(r => r.Content.Name != "Vorax Elites"), "no buff, no row");
+        var off = new SectionsTab { Vorax = false };
+        Check.That(Main.Rows(Rainforest, off, voraxLeft: 3).All(r => r.Content.Name != "Vorax Elites"), "section off");
+    }
+
+    [Test]
+    public void VoraxLeftIsTheBuffStacksAndZeroOnceItWasSeenAndIsGone()
+    {
+        var plugin = new Main();
+        Check.Equal(null, plugin.VoraxLeft(1, null));
+        Check.Equal(null, plugin.VoraxLeft(1, []));
+        Check.Equal(4, plugin.VoraxLeft(1, [new Buff(10, null, 1, 1), new Buff(Main.VoraxBuffId, "Vorax Monitor", 1, 1, null, 4)]));
+        Check.Equal(4, plugin.VoraxLeft(1, null));
+        Check.Equal(0, plugin.VoraxLeft(1, [new Buff(10, null, 1, 1)]));
+        Check.Equal(null, plugin.VoraxLeft(2, [new Buff(10, null, 1, 1)]));
+    }
+
+    [Test]
+    public void TickAsksForTheCharacterOnlyInAMapWithTheSectionOn()
+    {
+        var plugin = new Main();
+        try
+        {
+            TestGame.Set(GameState.Empty with { AreaId = 3, Area = Rainforest, Buffs = [new Buff(Main.VoraxBuffId, "Vorax Monitor", 1, 1, null, 2)] });
+            Check.That(TestGame.CharacterAskedDuring(() => plugin.Tick()), "asks");
+            Check.Equal(2, plugin.VoraxLeft(3, Game.State.Buffs));
+            plugin.Settings.Sections.Vorax = false;
+            Check.That(!TestGame.CharacterAskedDuring(() => plugin.Tick()), "off does not ask");
+        }
+        finally { TestGame.Set(GameState.Empty); }
+    }
+
+    [Test]
     public void HiddenRules()
     {
         var settings = new Settings();
