@@ -199,6 +199,15 @@ public sealed class MapInfoTests
     }
 
     [Test]
+    public void BagHidesOnlyWhenOverlapping()
+    {
+        var bag = new GameUi([new GamePanel("PCBag_C", PanelKind.Inventory, new(2400, 200), new(3300, 1200), false)]);
+        Check.That(Main.BehindBag(bag, new(3000, 600), new(360, 200)), "overlap hides");
+        Check.That(!Main.BehindBag(bag, new(3350, 600), new(360, 200)), "beside the bag shows");
+        Check.That(!Main.BehindBag(GameUi.Empty, new(3000, 600), new(360, 200)), "closed bag shows");
+    }
+
+    [Test]
     public void LayoutHeightGrowsWithContent()
     {
         float few = 0, many = 0;
